@@ -1,10 +1,18 @@
 R_DEF: Internal format may change without notice
 local
 color ic_launcher_background
+drawable ic_cloud_widget
 drawable ic_launcher_foreground
+drawable widget_background
+id widget_container
+id widget_count
+id widget_time
+layout widget_vape
 mipmap ic_launcher
 mipmap ic_launcher_round
 string app_name
+string widget_description
 style Theme.SmokeTracker
 xml backup_rules
 xml data_extraction_rules
+xml widget_info

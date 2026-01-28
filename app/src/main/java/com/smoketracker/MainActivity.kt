@@ -19,6 +19,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Cloud
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Remove
@@ -34,7 +35,10 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -119,6 +123,22 @@ fun MainScreen(repository: SmokeRepository) {
     var smokesToday by remember { mutableIntStateOf(repository.getSmokesToday()) }
     var lastSmokeTime by remember { mutableStateOf(repository.getLastSmokeTime()) }
     var timeSinceLastSmoke by remember { mutableStateOf("--:--") }
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    
+    // Refresh data when app resumes (e.g., after using widget)
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                smokesToday = repository.getSmokesToday()
+                lastSmokeTime = repository.getLastSmokeTime()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
     
     LaunchedEffect(lastSmokeTime) {
         while (true) {
@@ -146,6 +166,7 @@ fun MainScreen(repository: SmokeRepository) {
                 repository.logSmoke()
                 smokesToday = repository.getSmokesToday()
                 lastSmokeTime = repository.getLastSmokeTime()
+                VapeWidgetProvider.requestUpdate(context)
             },
             modifier = Modifier.size(200.dp),
             shape = MaterialTheme.shapes.extraLarge,
@@ -181,6 +202,7 @@ fun MainScreen(repository: SmokeRepository) {
                 val newLastTime = repository.decrementSmoke()
                 smokesToday = repository.getSmokesToday()
                 lastSmokeTime = newLastTime
+                VapeWidgetProvider.requestUpdate(context)
             },
             enabled = smokesToday > 0,
             modifier = Modifier.size(48.dp)
@@ -245,6 +267,7 @@ fun HistoryScreen(repository: SmokeRepository) {
     val dateFormatter = DateTimeFormatter.ofPattern("MMM dd, yyyy")
     val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
     val today = LocalDate.now()
+    val context = LocalContext.current
     
     Column(
         modifier = Modifier
@@ -287,7 +310,7 @@ fun HistoryScreen(repository: SmokeRepository) {
                             modifier = Modifier.padding(vertical = 8.dp)
                         )
                     }
-                    items(todayTimestamps.sortedDescending()) { timestamp ->
+                    items(todayTimestamps.sortedDescending(), key = { it.toString() }) { timestamp ->
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             colors = CardDefaults.cardColors(
@@ -297,7 +320,7 @@ fun HistoryScreen(repository: SmokeRepository) {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(16.dp),
+                                    .padding(horizontal = 16.dp, vertical = 8.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
@@ -314,12 +337,30 @@ fun HistoryScreen(repository: SmokeRepository) {
                                         fontSize = 16.sp
                                     )
                                 }
-                                Text(
-                                    text = timestamp.format(timeFormatter),
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = timestamp.format(timeFormatter),
+                                        fontSize = 18.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    IconButton(
+                                        onClick = {
+                                            repository.removeTimestamp(timestamp)
+                                            todayTimestamps = repository.getTodayTimestamps()
+                                            VapeWidgetProvider.requestUpdate(context)
+                                        },
+                                        modifier = Modifier.size(36.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Delete,
+                                            contentDescription = "Remove",
+                                            tint = MaterialTheme.colorScheme.error,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -507,26 +548,41 @@ fun StatisticsScreen(repository: SmokeRepository) {
                 ) {
                     val width = size.width
                     val height = size.height
-                    val padding = 40f
-                    val chartWidth = width - padding * 2
-                    val chartHeight = height - padding * 2
+                    val leftPadding = 60f
+                    val rightPadding = 40f
+                    val topPadding = 40f
+                    val bottomPadding = 40f
+                    val chartWidth = width - leftPadding - rightPadding
+                    val chartHeight = height - topPadding - bottomPadding
                     
-                    // Draw grid lines
+                    // Draw grid lines and Y-axis labels
                     for (i in 0..4) {
-                        val y = padding + chartHeight * (1 - i / 4f)
+                        val y = topPadding + chartHeight * (1 - i / 4f)
                         drawLine(
                             color = onSurfaceColor.copy(alpha = 0.1f),
-                            start = Offset(padding, y),
-                            end = Offset(width - padding, y),
+                            start = Offset(leftPadding, y),
+                            end = Offset(width - rightPadding, y),
                             strokeWidth = 1f
+                        )
+                        // Draw Y-axis value labels
+                        val yValue = (maxCount * i / 4)
+                        drawContext.canvas.nativeCanvas.drawText(
+                            yValue.toString(),
+                            leftPadding - 10f,
+                            y + 8f,
+                            android.graphics.Paint().apply {
+                                color = android.graphics.Color.GRAY
+                                textSize = 28f
+                                textAlign = android.graphics.Paint.Align.RIGHT
+                            }
                         )
                     }
                     
                     // Draw line chart
                     if (rangeData.isNotEmpty() && rangeData.size > 1) {
                         val points = rangeData.mapIndexed { index, (_, count) ->
-                            val x = padding + (chartWidth * index / (rangeData.size - 1).coerceAtLeast(1))
-                            val y = padding + chartHeight * (1 - count.toFloat() / maxCount)
+                            val x = leftPadding + (chartWidth * index / (rangeData.size - 1).coerceAtLeast(1))
+                            val y = topPadding + chartHeight * (1 - count.toFloat() / maxCount)
                             Offset(x, y)
                         }
                         
@@ -569,7 +625,7 @@ fun StatisticsScreen(repository: SmokeRepository) {
                             // Start date
                             drawText(
                                 rangeData.first().first.format(dateFormatter),
-                                padding,
+                                leftPadding,
                                 height - 5f,
                                 android.graphics.Paint().apply {
                                     color = android.graphics.Color.GRAY
@@ -580,7 +636,7 @@ fun StatisticsScreen(repository: SmokeRepository) {
                             // End date
                             drawText(
                                 rangeData.last().first.format(dateFormatter),
-                                width - padding,
+                                width - rightPadding,
                                 height - 5f,
                                 android.graphics.Paint().apply {
                                     color = android.graphics.Color.GRAY

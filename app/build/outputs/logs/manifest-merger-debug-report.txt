@@ -1,9 +1,9 @@
 -- Merging decision tree log ---
 manifest
-ADDED from /Users/home/workspace/smoke-tracker/app/src/main/AndroidManifest.xml:2:1-27:12
-INJECTED from /Users/home/workspace/smoke-tracker/app/src/main/AndroidManifest.xml:2:1-27:12
-INJECTED from /Users/home/workspace/smoke-tracker/app/src/main/AndroidManifest.xml:2:1-27:12
-INJECTED from /Users/home/workspace/smoke-tracker/app/src/main/AndroidManifest.xml:2:1-27:12
+ADDED from /Users/home/workspace/smoke-tracker/app/src/main/AndroidManifest.xml:2:1-40:12
+INJECTED from /Users/home/workspace/smoke-tracker/app/src/main/AndroidManifest.xml:2:1-40:12
+INJECTED from /Users/home/workspace/smoke-tracker/app/src/main/AndroidManifest.xml:2:1-40:12
+INJECTED from /Users/home/workspace/smoke-tracker/app/src/main/AndroidManifest.xml:2:1-40:12
 MERGED from [androidx.compose.material3:material3-android:1.2.0] /Users/home/.gradle/caches/transforms-3/726126eac87227a97c5b7906cb166a9d/transformed/material3-release/AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.compose.material:material-android:1.6.1] /Users/home/.gradle/caches/transforms-3/757ea2a369987581d2008f702daf79d8/transformed/material-release/AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.compose.material:material-icons-core-android:1.6.1] /Users/home/.gradle/caches/transforms-3/ecfb6eb305f3007d17071da11a24fcaf/transformed/material-icons-core-release/AndroidManifest.xml:2:1-7:12
@@ -60,8 +60,8 @@ MERGED from [androidx.tracing:tracing:1.0.0] /Users/home/.gradle/caches/transfor
 	xmlns:android
 		ADDED from /Users/home/workspace/smoke-tracker/app/src/main/AndroidManifest.xml:2:11-69
 application
-ADDED from /Users/home/workspace/smoke-tracker/app/src/main/AndroidManifest.xml:5:5-25:19
-INJECTED from /Users/home/workspace/smoke-tracker/app/src/main/AndroidManifest.xml:5:5-25:19
+ADDED from /Users/home/workspace/smoke-tracker/app/src/main/AndroidManifest.xml:5:5-38:19
+INJECTED from /Users/home/workspace/smoke-tracker/app/src/main/AndroidManifest.xml:5:5-38:19
 MERGED from [androidx.compose.ui:ui-test-manifest:1.6.1] /Users/home/.gradle/caches/transforms-3/7a73cd1a06c7f50cdafbfdf6e8e07405/transformed/ui-test-manifest-1.6.1/AndroidManifest.xml:22:5-26:19
 MERGED from [androidx.compose.ui:ui-test-manifest:1.6.1] /Users/home/.gradle/caches/transforms-3/7a73cd1a06c7f50cdafbfdf6e8e07405/transformed/ui-test-manifest-1.6.1/AndroidManifest.xml:22:5-26:19
 MERGED from [androidx.compose.ui:ui-tooling-android:1.6.1] /Users/home/.gradle/caches/transforms-3/9f1c5e95eb6a03f6b449490d1e983c8a/transformed/ui-tooling-release/AndroidManifest.xml:22:5-26:19
@@ -120,6 +120,32 @@ category#android.intent.category.LAUNCHER
 ADDED from /Users/home/workspace/smoke-tracker/app/src/main/AndroidManifest.xml:22:17-77
 	android:name
 		ADDED from /Users/home/workspace/smoke-tracker/app/src/main/AndroidManifest.xml:22:27-74
+receiver#com.smoketracker.VapeWidgetProvider
+ADDED from /Users/home/workspace/smoke-tracker/app/src/main/AndroidManifest.xml:26:9-37:20
+	android:exported
+		ADDED from /Users/home/workspace/smoke-tracker/app/src/main/AndroidManifest.xml:28:13-36
+	android:name
+		ADDED from /Users/home/workspace/smoke-tracker/app/src/main/AndroidManifest.xml:27:13-47
+intent-filter#action:name:android.appwidget.action.APPWIDGET_UPDATE+action:name:com.smoketracker.ACTION_VAPE_CLICK+action:name:com.smoketracker.ACTION_WIDGET_UPDATE
+ADDED from /Users/home/workspace/smoke-tracker/app/src/main/AndroidManifest.xml:29:13-33:29
+action#android.appwidget.action.APPWIDGET_UPDATE
+ADDED from /Users/home/workspace/smoke-tracker/app/src/main/AndroidManifest.xml:30:17-84
+	android:name
+		ADDED from /Users/home/workspace/smoke-tracker/app/src/main/AndroidManifest.xml:30:25-81
+action#com.smoketracker.ACTION_VAPE_CLICK
+ADDED from /Users/home/workspace/smoke-tracker/app/src/main/AndroidManifest.xml:31:17-77
+	android:name
+		ADDED from /Users/home/workspace/smoke-tracker/app/src/main/AndroidManifest.xml:31:25-74
+action#com.smoketracker.ACTION_WIDGET_UPDATE
+ADDED from /Users/home/workspace/smoke-tracker/app/src/main/AndroidManifest.xml:32:17-80
+	android:name
+		ADDED from /Users/home/workspace/smoke-tracker/app/src/main/AndroidManifest.xml:32:25-77
+meta-data#android.appwidget.provider
+ADDED from /Users/home/workspace/smoke-tracker/app/src/main/AndroidManifest.xml:34:13-36:55
+	android:resource
+		ADDED from /Users/home/workspace/smoke-tracker/app/src/main/AndroidManifest.xml:36:17-52
+	android:name
+		ADDED from /Users/home/workspace/smoke-tracker/app/src/main/AndroidManifest.xml:35:17-58
 uses-sdk
 INJECTED from /Users/home/workspace/smoke-tracker/app/src/main/AndroidManifest.xml reason: use-sdk injection requested
 INJECTED from /Users/home/workspace/smoke-tracker/app/src/main/AndroidManifest.xml

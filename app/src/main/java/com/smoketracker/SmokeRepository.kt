@@ -169,6 +169,42 @@ class SmokeRepository(context: Context) {
         }
     }
     
+    fun removeTimestamp(timestamp: LocalDateTime) {
+        val today = LocalDate.now().format(dateFormatter)
+        val timestamps = getTodayTimestamps().toMutableList()
+        
+        // Remove the specific timestamp
+        val removed = timestamps.remove(timestamp)
+        if (removed) {
+            saveTodayTimestamps(timestamps)
+            
+            // Update the count
+            val newCount = timestamps.size
+            prefs.edit()
+                .putInt(KEY_SMOKES_TODAY, newCount)
+                .apply()
+            
+            // Update last smoke time to the latest remaining timestamp
+            val newLastTime = timestamps.maxOrNull()
+            if (newLastTime != null) {
+                prefs.edit()
+                    .putString(KEY_LAST_SMOKE_TIME, newLastTime.format(dateTimeFormatter))
+                    .apply()
+            }
+            
+            // Update history
+            if (newCount > 0) {
+                historyPrefs.edit()
+                    .putInt(today, newCount)
+                    .apply()
+            } else {
+                historyPrefs.edit()
+                    .remove(today)
+                    .apply()
+            }
+        }
+    }
+    
     private fun saveTodayTimestamps(timestamps: List<LocalDateTime>) {
         val str = timestamps.joinToString("|") { it.format(dateTimeFormatter) }
         timestampsPrefs.edit()

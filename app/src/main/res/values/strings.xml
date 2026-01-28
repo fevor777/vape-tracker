@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Vape Tracker</string>
+    <string name="widget_description">Track your vapes with a tap. Shows today\'s count and time since last vape.</string>
 </resources>

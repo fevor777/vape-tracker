@@ -53,6 +53,7 @@ drawable ic_call_answer_video
 drawable ic_call_answer_video_low
 drawable ic_call_decline
 drawable ic_call_decline_low
+drawable ic_cloud_widget
 drawable ic_launcher_foreground
 drawable notification_action_background
 drawable notification_bg
@@ -67,6 +68,7 @@ drawable notification_template_icon_bg
 drawable notification_template_icon_low_bg
 drawable notification_tile_bg
 drawable notify_panel_notification_icon_bg
+drawable widget_background
 id accessibility_action_clickable_span
 id accessibility_custom_action_0
 id accessibility_custom_action_1
@@ -153,6 +155,9 @@ id view_tree_lifecycle_owner
 id view_tree_on_back_pressed_dispatcher_owner
 id view_tree_saved_state_registry_owner
 id view_tree_view_model_store_owner
+id widget_container
+id widget_count
+id widget_time
 id wrapped_composition_tag
 integer status_bar_notification_info_maxnum
 layout custom_dialog
@@ -164,6 +169,7 @@ layout notification_template_custom_big
 layout notification_template_icon_group
 layout notification_template_part_chronometer
 layout notification_template_part_time
+layout widget_vape
 mipmap ic_launcher
 mipmap ic_launcher_round
 string androidx_startup
@@ -251,6 +257,7 @@ string tab
 string template_percent
 string tooltip_description
 string tooltip_label
+string widget_description
 style DialogWindowTheme
 style FloatingDialogTheme
 style FloatingDialogWindowTheme
@@ -270,3 +277,4 @@ styleable GradientColor android_startColor android_endColor android_type android
 styleable GradientColorItem android_color android_offset
 xml backup_rules
 xml data_extraction_rules
+xml widget_info

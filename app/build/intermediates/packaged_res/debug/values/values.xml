@@ -2,5 +2,6 @@
 <resources>
     <color name="ic_launcher_background">#5C6BC0</color>
     <string name="app_name">Vape Tracker</string>
+    <string name="widget_description">Track your vapes with a tap. Shows today\'s count and time since last vape.</string>
     <style name="Theme.SmokeTracker" parent="android:Theme.Material.Light.NoActionBar"/>
 </resources>
