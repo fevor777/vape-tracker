@@ -174,69 +174,15 @@ fun MainScreen(repository: SmokeRepository) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
             .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.SpaceBetween
     ) {
-        Button(
-            onClick = {
-                repository.logSmoke()
-                smokesToday = repository.getSmokesToday()
-                lastSmokeTime = repository.getLastSmokeTime()
-                todayTimestamps = repository.getTodayTimestamps()
-                VapeWidgetProvider.requestUpdate(context)
-            },
-            modifier = Modifier.size(200.dp),
-            shape = MaterialTheme.shapes.extraLarge,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-            ),
-            elevation = ButtonDefaults.buttonElevation(
-                defaultElevation = 8.dp,
-                pressedElevation = 2.dp
-            )
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(
-                    imageVector = Icons.Default.Cloud,
-                    contentDescription = "Vape",
-                    modifier = Modifier.size(72.dp)
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "VAPE",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        }
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        // Minus button under vape button
-        FilledTonalIconButton(
-            onClick = {
-                val newLastTime = repository.decrementSmoke()
-                smokesToday = repository.getSmokesToday()
-                lastSmokeTime = newLastTime
-                todayTimestamps = repository.getTodayTimestamps()
-                VapeWidgetProvider.requestUpdate(context)
-            },
-            enabled = smokesToday > 0,
-            modifier = Modifier.size(48.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Remove,
-                contentDescription = "Reduce count"
-            )
-        }
-        
-        Spacer(modifier = Modifier.height(24.dp))
-        
+        // Info Card - flexible size based on available space
         Card(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant
             ),
@@ -244,55 +190,149 @@ fun MainScreen(repository: SmokeRepository) {
         ) {
             Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .fillMaxSize()
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.SpaceEvenly
             ) {
-                Text(
-                    text = "Time since last vape",
-                    fontSize = 16.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = timeSinceLastSmoke,
-                    fontSize = 48.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                
-                Spacer(modifier = Modifier.height(24.dp))
-                HorizontalDivider()
-                Spacer(modifier = Modifier.height(24.dp))
-                
-                Text(
-                    text = "Vapes today",
-                    fontSize = 16.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = smokesToday.toString(),
-                    fontSize = 48.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.secondary
-                )
-                
+                // Avg time between vapes section
                 if (avgTimeBetweenVapes != null) {
-                    Spacer(modifier = Modifier.height(24.dp))
-                    HorizontalDivider()
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = "Avg time between vapes",
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "${avgTimeBetweenVapes / 60}h ${avgTimeBetweenVapes % 60}m",
+                            fontSize = 44.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.tertiary
+                        )
+                    }
                     
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                }
+                
+                // Vapes today section
+                Column(
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
                     Text(
-                        text = "Avg time between vapes",
-                        fontSize = 16.sp,
+                        text = "Vapes today",
+                        fontSize = 14.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = "${avgTimeBetweenVapes / 60}h ${avgTimeBetweenVapes % 60}m",
-                        fontSize = 48.sp,
+                        text = smokesToday.toString(),
+                        fontSize = 44.sp,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.tertiary
+                        color = MaterialTheme.colorScheme.secondary
                     )
                 }
+                
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                
+                // Time since last vape section
+                Column(
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = "Time since last vape",
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Row(
+                        verticalAlignment = Alignment.Bottom,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = timeSinceLastSmoke,
+                            fontSize = 44.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        lastSmokeTime?.let { time ->
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "at ${time.format(DateTimeFormatter.ofPattern("HH:mm"))}",
+                                fontSize = 28.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                                modifier = Modifier.padding(bottom = 4.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        // Vape button and minus button at the bottom
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Button(
+                onClick = {
+                    repository.logSmoke()
+                    smokesToday = repository.getSmokesToday()
+                    lastSmokeTime = repository.getLastSmokeTime()
+                    todayTimestamps = repository.getTodayTimestamps()
+                    VapeWidgetProvider.requestUpdate(context)
+                },
+                modifier = Modifier.size(200.dp),
+                shape = MaterialTheme.shapes.extraLarge,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                ),
+                elevation = ButtonDefaults.buttonElevation(
+                    defaultElevation = 8.dp,
+                    pressedElevation = 2.dp
+                )
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        imageVector = Icons.Default.Cloud,
+                        contentDescription = "Vape",
+                        modifier = Modifier.size(72.dp)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "VAPE",
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Minus button under vape button
+            FilledTonalIconButton(
+                onClick = {
+                    val newLastTime = repository.decrementSmoke()
+                    smokesToday = repository.getSmokesToday()
+                    lastSmokeTime = newLastTime
+                    todayTimestamps = repository.getTodayTimestamps()
+                    VapeWidgetProvider.requestUpdate(context)
+                },
+                enabled = smokesToday > 0,
+                modifier = Modifier.size(48.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Remove,
+                    contentDescription = "Reduce count"
+                )
             }
         }
     }
@@ -381,18 +421,17 @@ fun HistoryScreen(repository: SmokeRepository) {
                                         tint = MaterialTheme.colorScheme.onPrimaryContainer
                                     )
                                     Spacer(modifier = Modifier.width(12.dp))
-                                    Column {
+                                    Text(
+                                        text = "Vape",
+                                        fontSize = 16.sp
+                                    )
+                                    if (timeSincePrevious != null) {
+                                        Spacer(modifier = Modifier.width(8.dp))
                                         Text(
-                                            text = "Vape",
-                                            fontSize = 16.sp
+                                            text = "after $timeSincePrevious",
+                                            fontSize = 16.sp,
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                                         )
-                                        if (timeSincePrevious != null) {
-                                            Text(
-                                                text = "after $timeSincePrevious",
-                                                fontSize = 12.sp,
-                                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                                            )
-                                        }
                                     }
                                 }
                                 Row(verticalAlignment = Alignment.CenterVertically) {
