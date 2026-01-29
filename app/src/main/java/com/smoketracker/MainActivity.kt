@@ -428,7 +428,7 @@ fun HistoryScreen(repository: SmokeRepository) {
                                     if (timeSincePrevious != null) {
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text(
-                                            text = "after $timeSincePrevious",
+                                            text = "after $timeSincePrevious ",
                                             fontSize = 16.sp,
                                             color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                                         )
@@ -826,15 +826,18 @@ fun StatisticsScreen(repository: SmokeRepository) {
             val maxInterval = timeIntervals.maxOrNull() ?: 1
             val avgInterval = timeIntervals.average()
             val tertiaryColor = MaterialTheme.colorScheme.tertiary
+            val primaryColor = MaterialTheme.colorScheme.primary
             val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
             // Get the "end" time of each interval (when the vape happened)
             val intervalEndTimes = todayTimestamps.drop(1).map { it.format(timeFormatter) }
             var selectedBarIndex by remember { mutableStateOf<Int?>(null) }
+            var targetMinutesText by remember { mutableStateOf("60") }
+            val targetMinutes = targetMinutesText.toIntOrNull() ?: 60
             
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(320.dp),
+                    .height(380.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant
                 )
@@ -846,6 +849,33 @@ fun StatisticsScreen(repository: SmokeRepository) {
                         fontWeight = FontWeight.Medium,
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
+                    
+                    // Target time input
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    ) {
+                        Text(
+                            text = "Target:",
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        OutlinedTextField(
+                            value = targetMinutesText,
+                            onValueChange = { targetMinutesText = it.filter { c -> c.isDigit() } },
+                            modifier = Modifier.width(80.dp),
+                            singleLine = true,
+                            textStyle = androidx.compose.ui.text.TextStyle(fontSize = 14.sp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "min (${targetMinutes / 60}h ${targetMinutes % 60}m)",
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    
                     Text(
                         text = "Avg: ${avgInterval.toInt() / 60}h ${avgInterval.toInt() % 60}m",
                         fontSize = 12.sp,
@@ -954,6 +984,27 @@ fun StatisticsScreen(repository: SmokeRepository) {
                                     textSize = 20f
                                     textAlign = android.graphics.Paint.Align.CENTER
                                 }
+                            )
+                        }
+                        
+                        // Draw average line
+                        val avgY = topPadding + chartHeight - (avgInterval.toFloat() / maxInterval) * chartHeight
+                        drawLine(
+                            color = tertiaryColor,
+                            start = Offset(leftPadding, avgY),
+                            end = Offset(width - rightPadding, avgY),
+                            strokeWidth = 2f,
+                            pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
+                        )
+                        
+                        // Draw target line
+                        val targetY = topPadding + chartHeight - (targetMinutes.toFloat() / maxInterval) * chartHeight
+                        if (targetY >= topPadding && targetY <= topPadding + chartHeight) {
+                            drawLine(
+                                color = primaryColor,
+                                start = Offset(leftPadding, targetY),
+                                end = Offset(width - rightPadding, targetY),
+                                strokeWidth = 3f
                             )
                         }
                     }
