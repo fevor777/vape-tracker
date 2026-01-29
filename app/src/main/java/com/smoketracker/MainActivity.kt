@@ -11,6 +11,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -34,6 +35,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
@@ -123,8 +125,22 @@ fun MainScreen(repository: SmokeRepository) {
     var smokesToday by remember { mutableIntStateOf(repository.getSmokesToday()) }
     var lastSmokeTime by remember { mutableStateOf(repository.getLastSmokeTime()) }
     var timeSinceLastSmoke by remember { mutableStateOf("--:--") }
+    var todayTimestamps by remember { mutableStateOf(repository.getTodayTimestamps()) }
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    
+    // Calculate average time between vapes
+    val avgTimeBetweenVapes = remember(todayTimestamps) {
+        val sorted = todayTimestamps.sorted()
+        if (sorted.size < 2) {
+            null
+        } else {
+            val intervals = sorted.zipWithNext { prev, next ->
+                Duration.between(prev, next).toMinutes().toInt()
+            }
+            intervals.average().toInt()
+        }
+    }
     
     // Refresh data when app resumes (e.g., after using widget)
     DisposableEffect(lifecycleOwner) {
@@ -132,6 +148,7 @@ fun MainScreen(repository: SmokeRepository) {
             if (event == Lifecycle.Event.ON_RESUME) {
                 smokesToday = repository.getSmokesToday()
                 lastSmokeTime = repository.getLastSmokeTime()
+                todayTimestamps = repository.getTodayTimestamps()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -157,6 +174,7 @@ fun MainScreen(repository: SmokeRepository) {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
@@ -166,6 +184,7 @@ fun MainScreen(repository: SmokeRepository) {
                 repository.logSmoke()
                 smokesToday = repository.getSmokesToday()
                 lastSmokeTime = repository.getLastSmokeTime()
+                todayTimestamps = repository.getTodayTimestamps()
                 VapeWidgetProvider.requestUpdate(context)
             },
             modifier = Modifier.size(200.dp),
@@ -202,6 +221,7 @@ fun MainScreen(repository: SmokeRepository) {
                 val newLastTime = repository.decrementSmoke()
                 smokesToday = repository.getSmokesToday()
                 lastSmokeTime = newLastTime
+                todayTimestamps = repository.getTodayTimestamps()
                 VapeWidgetProvider.requestUpdate(context)
             },
             enabled = smokesToday > 0,
@@ -255,6 +275,24 @@ fun MainScreen(repository: SmokeRepository) {
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.secondary
                 )
+                
+                if (avgTimeBetweenVapes != null) {
+                    Spacer(modifier = Modifier.height(24.dp))
+                    HorizontalDivider()
+                    Spacer(modifier = Modifier.height(24.dp))
+                    
+                    Text(
+                        text = "Avg time between vapes",
+                        fontSize = 16.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "${avgTimeBetweenVapes / 60}h ${avgTimeBetweenVapes % 60}m",
+                        fontSize = 48.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.tertiary
+                    )
+                }
             }
         }
     }
@@ -310,7 +348,18 @@ fun HistoryScreen(repository: SmokeRepository) {
                             modifier = Modifier.padding(vertical = 8.dp)
                         )
                     }
-                    items(todayTimestamps.sortedDescending(), key = { it.toString() }) { timestamp ->
+                    val sortedTimestamps = todayTimestamps.sortedDescending()
+                    items(sortedTimestamps.indices.toList(), key = { sortedTimestamps[it].toString() }) { index ->
+                        val timestamp = sortedTimestamps[index]
+                        val previousTimestamp = if (index < sortedTimestamps.size - 1) sortedTimestamps[index + 1] else null
+                        val timeSincePrevious = if (previousTimestamp != null) {
+                            val duration = Duration.between(previousTimestamp, timestamp)
+                            val hours = duration.toHours()
+                            val minutes = duration.toMinutes() % 60
+                            if (hours > 0) "${hours}h ${minutes}m" else "${minutes}m"
+                        } else {
+                            null
+                        }
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             colors = CardDefaults.cardColors(
@@ -332,10 +381,19 @@ fun HistoryScreen(repository: SmokeRepository) {
                                         tint = MaterialTheme.colorScheme.onPrimaryContainer
                                     )
                                     Spacer(modifier = Modifier.width(12.dp))
-                                    Text(
-                                        text = "Vape",
-                                        fontSize = 16.sp
-                                    )
+                                    Column {
+                                        Text(
+                                            text = "Vape",
+                                            fontSize = 16.sp
+                                        )
+                                        if (timeSincePrevious != null) {
+                                            Text(
+                                                text = "after $timeSincePrevious",
+                                                fontSize = 12.sp,
+                                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                                            )
+                                        }
+                                    }
                                 }
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
@@ -705,6 +763,236 @@ fun StatisticsScreen(repository: SmokeRepository) {
                         text = minDay?.first?.format(dateFormatter) ?: "",
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        // Time between vapes chart (today only)
+        val todayTimestamps = remember { repository.getTodayTimestamps().sorted() }
+        val timeIntervals = remember(todayTimestamps) {
+            if (todayTimestamps.size < 2) {
+                emptyList()
+            } else {
+                todayTimestamps.zipWithNext { prev, next ->
+                    val duration = Duration.between(prev, next)
+                    duration.toMinutes().toInt()
+                }
+            }
+        }
+        
+        if (timeIntervals.isNotEmpty()) {
+            val maxInterval = timeIntervals.maxOrNull() ?: 1
+            val avgInterval = timeIntervals.average()
+            val tertiaryColor = MaterialTheme.colorScheme.tertiary
+            val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+            // Get the "end" time of each interval (when the vape happened)
+            val intervalEndTimes = todayTimestamps.drop(1).map { it.format(timeFormatter) }
+            var selectedBarIndex by remember { mutableStateOf<Int?>(null) }
+            
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(320.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "Time Between Vapes (Today)",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    Text(
+                        text = "Avg: ${avgInterval.toInt() / 60}h ${avgInterval.toInt() % 60}m",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 4.dp)
+                    )
+                    
+                    // Selected bar info
+                    if (selectedBarIndex != null) {
+                        val idx = selectedBarIndex!!
+                        val intervalMins = timeIntervals[idx]
+                        Text(
+                            text = "@ ${intervalEndTimes[idx]} — ${intervalMins / 60}h ${intervalMins % 60}m since previous",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.tertiary,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                    } else {
+                        Text(
+                            text = "Tap a bar to see details",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                    }
+                    
+                    var chartWidth by remember { mutableStateOf(0f) }
+                    var leftPadding by remember { mutableStateOf(60f) }
+                    var barSpacing by remember { mutableStateOf(0f) }
+                    
+                    Canvas(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                            .pointerInput(timeIntervals) {
+                                detectTapGestures { offset ->
+                                    if (barSpacing > 0) {
+                                        val tappedIndex = ((offset.x - leftPadding) / barSpacing).toInt()
+                                        if (tappedIndex in timeIntervals.indices) {
+                                            selectedBarIndex = if (selectedBarIndex == tappedIndex) null else tappedIndex
+                                        }
+                                    }
+                                }
+                            }
+                    ) {
+                        val width = size.width
+                        val height = size.height
+                        leftPadding = 60f
+                        val rightPadding = 20f
+                        val topPadding = 20f
+                        val bottomPadding = 40f
+                        chartWidth = width - leftPadding - rightPadding
+                        val chartHeight = height - topPadding - bottomPadding
+                        val barWidthLocal = (chartWidth / timeIntervals.size) * 0.7f
+                        barSpacing = chartWidth / timeIntervals.size
+                        
+                        // Draw grid lines and Y-axis labels (in minutes)
+                        val ySteps = 4
+                        for (i in 0..ySteps) {
+                            val y = topPadding + chartHeight * (1 - i / ySteps.toFloat())
+                            drawLine(
+                                color = onSurfaceColor.copy(alpha = 0.1f),
+                                start = Offset(leftPadding, y),
+                                end = Offset(width - rightPadding, y),
+                                strokeWidth = 1f
+                            )
+                            val yValueMinutes = (maxInterval * i / ySteps)
+                            val label = if (yValueMinutes >= 60) {
+                                "${yValueMinutes / 60}h${if (yValueMinutes % 60 > 0) " ${yValueMinutes % 60}m" else ""}"
+                            } else {
+                                "${yValueMinutes}m"
+                            }
+                            drawContext.canvas.nativeCanvas.drawText(
+                                label,
+                                leftPadding - 10f,
+                                y + 8f,
+                                android.graphics.Paint().apply {
+                                    color = android.graphics.Color.GRAY
+                                    textSize = 24f
+                                    textAlign = android.graphics.Paint.Align.RIGHT
+                                }
+                            )
+                        }
+                        
+                        // Draw bars
+                        timeIntervals.forEachIndexed { index, intervalMinutes ->
+                            val barHeight = (intervalMinutes.toFloat() / maxInterval) * chartHeight
+                            val x = leftPadding + (index * barSpacing) + (barSpacing - barWidthLocal) / 2
+                            val y = topPadding + chartHeight - barHeight
+                            
+                            val isSelected = selectedBarIndex == index
+                            drawRect(
+                                color = if (isSelected) tertiaryColor else tertiaryColor.copy(alpha = 0.7f),
+                                topLeft = Offset(x, y),
+                                size = androidx.compose.ui.geometry.Size(barWidthLocal, barHeight)
+                            )
+                            
+                            // Draw bar number below
+                            drawContext.canvas.nativeCanvas.drawText(
+                                "#${index + 1}",
+                                x + barWidthLocal / 2,
+                                height - 10f,
+                                android.graphics.Paint().apply {
+                                    color = if (isSelected) android.graphics.Color.DKGRAY else android.graphics.Color.GRAY
+                                    textSize = 20f
+                                    textAlign = android.graphics.Paint.Align.CENTER
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Time interval stats
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                val longestInterval = timeIntervals.maxOrNull() ?: 0
+                val shortestInterval = timeIntervals.minOrNull() ?: 0
+                
+                Card(
+                    modifier = Modifier.weight(1f),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.tertiaryContainer
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text("Longest Gap", fontSize = 12.sp)
+                        Text(
+                            text = "${longestInterval / 60}h ${longestInterval % 60}m",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+                
+                Card(
+                    modifier = Modifier.weight(1f),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text("Shortest Gap", fontSize = 12.sp)
+                        Text(
+                            text = "${shortestInterval / 60}h ${shortestInterval % 60}m",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        } else {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "Time Between Vapes",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    Text(
+                        text = "Need at least 2 vapes today to show intervals",
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
                     )
                 }
             }

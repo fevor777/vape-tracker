@@ -89,17 +89,17 @@ class VapeWidgetProvider : AppWidgetProvider() {
             views.setTextViewText(R.id.widget_count, smokesToday.toString())
             views.setTextViewText(R.id.widget_time, timeSinceLastSmoke)
             
-            // Set click action to log smoke
-            val vapeIntent = Intent(context, VapeWidgetProvider::class.java).apply {
-                action = ACTION_VAPE_CLICK
+            // Set click action to open the app
+            val openAppIntent = Intent(context, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             }
-            val vapePendingIntent = PendingIntent.getBroadcast(
+            val openAppPendingIntent = PendingIntent.getActivity(
                 context,
                 0,
-                vapeIntent,
+                openAppIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
-            views.setOnClickPendingIntent(R.id.widget_container, vapePendingIntent)
+            views.setOnClickPendingIntent(R.id.widget_container, openAppPendingIntent)
             
             // Update the widget
             appWidgetManager.updateAppWidget(appWidgetId, views)
