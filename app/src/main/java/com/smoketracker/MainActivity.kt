@@ -75,8 +75,8 @@ class MainActivity : ComponentActivity() {
 
 enum class TabItem(val title: String, val icon: ImageVector) {
     Main("Main", Icons.Default.Home),
-    History("History", Icons.Default.History),
     Statistics("Stats", Icons.Default.BarChart),
+    History("History", Icons.Default.History),
     Export("Export", Icons.Default.SwapHoriz)
 }
 
@@ -112,8 +112,8 @@ fun VapeTrackerApp(repository: SmokeRepository) {
         Box(modifier = Modifier.padding(paddingValues)) {
             when (selectedTab) {
                 0 -> MainScreen(repository)
-                1 -> HistoryScreen(repository)
-                2 -> StatisticsScreen(repository)
+                1 -> StatisticsScreen(repository)
+                2 -> HistoryScreen(repository)
                 3 -> ExportImportScreen(repository)
             }
         }
@@ -555,260 +555,6 @@ fun StatisticsScreen(repository: SmokeRepository) {
             modifier = Modifier.padding(bottom = 16.dp)
         )
         
-        // Date range selector
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            DateRange.entries.forEach { range ->
-                FilterChip(
-                    onClick = { selectedRange = range },
-                    label = { Text(range.label, fontSize = 12.sp) },
-                    selected = selectedRange == range,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-        }
-        
-        Spacer(modifier = Modifier.height(24.dp))
-        
-        // Summary cards
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            val totalInRange = rangeData.sumOf { it.second }
-            val avgPerDay = if (rangeData.isNotEmpty()) totalInRange.toFloat() / rangeData.size else 0f
-            
-            Card(
-                modifier = Modifier.weight(1f),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                )
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text("Total", fontSize = 14.sp)
-                    Text(
-                        text = totalInRange.toString(),
-                        fontSize = 32.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-            
-            Card(
-                modifier = Modifier.weight(1f),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer
-                )
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text("Avg/day", fontSize = 14.sp)
-                    Text(
-                        text = String.format("%.1f", avgPerDay),
-                        fontSize = 32.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-        }
-        
-        Spacer(modifier = Modifier.height(24.dp))
-        
-        // Line chart
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(280.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
-            )
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = "Daily Vapes",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-                
-                Canvas(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                ) {
-                    val width = size.width
-                    val height = size.height
-                    val leftPadding = 60f
-                    val rightPadding = 40f
-                    val topPadding = 40f
-                    val bottomPadding = 40f
-                    val chartWidth = width - leftPadding - rightPadding
-                    val chartHeight = height - topPadding - bottomPadding
-                    
-                    // Draw grid lines and Y-axis labels
-                    for (i in 0..4) {
-                        val y = topPadding + chartHeight * (1 - i / 4f)
-                        drawLine(
-                            color = onSurfaceColor.copy(alpha = 0.1f),
-                            start = Offset(leftPadding, y),
-                            end = Offset(width - rightPadding, y),
-                            strokeWidth = 1f
-                        )
-                        // Draw Y-axis value labels
-                        val yValue = (maxCount * i / 4)
-                        drawContext.canvas.nativeCanvas.drawText(
-                            yValue.toString(),
-                            leftPadding - 10f,
-                            y + 8f,
-                            android.graphics.Paint().apply {
-                                color = android.graphics.Color.GRAY
-                                textSize = 28f
-                                textAlign = android.graphics.Paint.Align.RIGHT
-                            }
-                        )
-                    }
-                    
-                    // Draw line chart
-                    if (rangeData.isNotEmpty() && rangeData.size > 1) {
-                        val points = rangeData.mapIndexed { index, (_, count) ->
-                            val x = leftPadding + (chartWidth * index / (rangeData.size - 1).coerceAtLeast(1))
-                            val y = topPadding + chartHeight * (1 - count.toFloat() / maxCount)
-                            Offset(x, y)
-                        }
-                        
-                        // Draw line
-                        val path = Path()
-                        points.forEachIndexed { index, point ->
-                            if (index == 0) {
-                                path.moveTo(point.x, point.y)
-                            } else {
-                                path.lineTo(point.x, point.y)
-                            }
-                        }
-                        drawPath(
-                            path = path,
-                            color = primaryColor,
-                            style = Stroke(width = 3f)
-                        )
-                        
-                        // Draw points (only for smaller ranges)
-                        if (rangeData.size <= 14) {
-                            points.forEach { point ->
-                                drawCircle(
-                                    color = primaryColor,
-                                    radius = 6f,
-                                    center = point
-                                )
-                                drawCircle(
-                                    color = Color.White,
-                                    radius = 3f,
-                                    center = point
-                                )
-                            }
-                        }
-                    }
-                    
-                    // Draw labels for start and end dates
-                    val dateFormatter = DateTimeFormatter.ofPattern("MM/dd")
-                    if (rangeData.isNotEmpty()) {
-                        drawContext.canvas.nativeCanvas.apply {
-                            // Start date
-                            drawText(
-                                rangeData.first().first.format(dateFormatter),
-                                leftPadding,
-                                height - 5f,
-                                android.graphics.Paint().apply {
-                                    color = android.graphics.Color.GRAY
-                                    textSize = 24f
-                                    textAlign = android.graphics.Paint.Align.LEFT
-                                }
-                            )
-                            // End date
-                            drawText(
-                                rangeData.last().first.format(dateFormatter),
-                                width - rightPadding,
-                                height - 5f,
-                                android.graphics.Paint().apply {
-                                    color = android.graphics.Color.GRAY
-                                    textSize = 24f
-                                    textAlign = android.graphics.Paint.Align.RIGHT
-                                }
-                            )
-                        }
-                    }
-                }
-            }
-        }
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        // Min/Max stats
-        val maxDay = rangeData.maxByOrNull { it.second }
-        val minDay = rangeData.filter { it.second > 0 }.minByOrNull { it.second }
-        val dateFormatter = DateTimeFormatter.ofPattern("MMM dd")
-        
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Card(
-                modifier = Modifier.weight(1f),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer
-                )
-            ) {
-                Column(
-                    modifier = Modifier.padding(12.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text("Most", fontSize = 12.sp)
-                    Text(
-                        text = maxDay?.second?.toString() ?: "-",
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = maxDay?.first?.format(dateFormatter) ?: "",
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-            
-            Card(
-                modifier = Modifier.weight(1f),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.tertiaryContainer
-                )
-            ) {
-                Column(
-                    modifier = Modifier.padding(12.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text("Least", fontSize = 12.sp)
-                    Text(
-                        text = minDay?.second?.toString() ?: "-",
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = minDay?.first?.format(dateFormatter) ?: "",
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        }
-        
-        Spacer(modifier = Modifier.height(24.dp))
-        
         // Time between vapes chart (today only)
         val todayTimestamps = remember { repository.getTodayTimestamps().sorted() }
         val timeIntervals = remember(todayTimestamps) {
@@ -1083,6 +829,260 @@ fun StatisticsScreen(repository: SmokeRepository) {
                         fontSize = 14.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center
+                    )
+                }
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        // Date range selector
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            DateRange.entries.forEach { range ->
+                FilterChip(
+                    onClick = { selectedRange = range },
+                    label = { Text(range.label, fontSize = 12.sp) },
+                    selected = selectedRange == range,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        // Summary cards
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            val totalInRange = rangeData.sumOf { it.second }
+            val avgPerDay = if (rangeData.isNotEmpty()) totalInRange.toFloat() / rangeData.size else 0f
+            
+            Card(
+                modifier = Modifier.weight(1f),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("Total", fontSize = 14.sp)
+                    Text(
+                        text = totalInRange.toString(),
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+            
+            Card(
+                modifier = Modifier.weight(1f),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("Avg/day", fontSize = 14.sp)
+                    Text(
+                        text = String.format("%.1f", avgPerDay),
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        // Line chart
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(280.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
+            )
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = "Daily Vapes",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+                
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                ) {
+                    val width = size.width
+                    val height = size.height
+                    val leftPadding = 60f
+                    val rightPadding = 40f
+                    val topPadding = 40f
+                    val bottomPadding = 40f
+                    val chartWidth = width - leftPadding - rightPadding
+                    val chartHeight = height - topPadding - bottomPadding
+                    
+                    // Draw grid lines and Y-axis labels
+                    for (i in 0..4) {
+                        val y = topPadding + chartHeight * (1 - i / 4f)
+                        drawLine(
+                            color = onSurfaceColor.copy(alpha = 0.1f),
+                            start = Offset(leftPadding, y),
+                            end = Offset(width - rightPadding, y),
+                            strokeWidth = 1f
+                        )
+                        // Draw Y-axis value labels
+                        val yValue = (maxCount * i / 4)
+                        drawContext.canvas.nativeCanvas.drawText(
+                            yValue.toString(),
+                            leftPadding - 10f,
+                            y + 8f,
+                            android.graphics.Paint().apply {
+                                color = android.graphics.Color.GRAY
+                                textSize = 28f
+                                textAlign = android.graphics.Paint.Align.RIGHT
+                            }
+                        )
+                    }
+                    
+                    // Draw line chart
+                    if (rangeData.isNotEmpty() && rangeData.size > 1) {
+                        val points = rangeData.mapIndexed { index, (_, count) ->
+                            val x = leftPadding + (chartWidth * index / (rangeData.size - 1).coerceAtLeast(1))
+                            val y = topPadding + chartHeight * (1 - count.toFloat() / maxCount)
+                            Offset(x, y)
+                        }
+                        
+                        // Draw line
+                        val path = Path()
+                        points.forEachIndexed { index, point ->
+                            if (index == 0) {
+                                path.moveTo(point.x, point.y)
+                            } else {
+                                path.lineTo(point.x, point.y)
+                            }
+                        }
+                        drawPath(
+                            path = path,
+                            color = primaryColor,
+                            style = Stroke(width = 3f)
+                        )
+                        
+                        // Draw points (only for smaller ranges)
+                        if (rangeData.size <= 14) {
+                            points.forEach { point ->
+                                drawCircle(
+                                    color = primaryColor,
+                                    radius = 6f,
+                                    center = point
+                                )
+                                drawCircle(
+                                    color = Color.White,
+                                    radius = 3f,
+                                    center = point
+                                )
+                            }
+                        }
+                    }
+                    
+                    // Draw labels for start and end dates
+                    val dateFormatter = DateTimeFormatter.ofPattern("MM/dd")
+                    if (rangeData.isNotEmpty()) {
+                        drawContext.canvas.nativeCanvas.apply {
+                            // Start date
+                            drawText(
+                                rangeData.first().first.format(dateFormatter),
+                                leftPadding,
+                                height - 5f,
+                                android.graphics.Paint().apply {
+                                    color = android.graphics.Color.GRAY
+                                    textSize = 24f
+                                    textAlign = android.graphics.Paint.Align.LEFT
+                                }
+                            )
+                            // End date
+                            drawText(
+                                rangeData.last().first.format(dateFormatter),
+                                width - rightPadding,
+                                height - 5f,
+                                android.graphics.Paint().apply {
+                                    color = android.graphics.Color.GRAY
+                                    textSize = 24f
+                                    textAlign = android.graphics.Paint.Align.RIGHT
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        // Min/Max stats
+        val maxDay = rangeData.maxByOrNull { it.second }
+        val minDay = rangeData.filter { it.second > 0 }.minByOrNull { it.second }
+        val dateFormatter = DateTimeFormatter.ofPattern("MMM dd")
+        
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Card(
+                modifier = Modifier.weight(1f),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("Most", fontSize = 12.sp)
+                    Text(
+                        text = maxDay?.second?.toString() ?: "-",
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = maxDay?.first?.format(dateFormatter) ?: "",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            
+            Card(
+                modifier = Modifier.weight(1f),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.tertiaryContainer
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("Least", fontSize = 12.sp)
+                    Text(
+                        text = minDay?.second?.toString() ?: "-",
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = minDay?.first?.format(dateFormatter) ?: "",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
